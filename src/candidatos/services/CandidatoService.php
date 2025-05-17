@@ -17,13 +17,13 @@ class CandidatoService {
                 "demograficos" => [
                     "genero" => $candidato["genero"],
                     "rango_edad" => $candidato["rango_edad"],
-                    "tipo_identificacion" => $candidato["tipo_identificacion"]
-                ],
-                "ubicacion" => [
-                    "pais" => $candidato["pais"],
-                    "estado" => $candidato["estado"],
-                    "municipio" => $candidato["municipio"],
-                    "colonia" => $candidato["colonia"]
+                    "tipo_identificacion" => $candidato["tipo_identificacion"],
+                    "ubicacion" => [
+                        "pais" => $candidato["pais"],
+                        "estado" => $candidato["estado"],
+                        "municipio" => $candidato["municipio"],
+                        "colonia" => $candidato["colonia"]
+                    ]
                 ],
                 "formacion" => [
                     "nivel_estudio" => $candidato["nivel_estudio"],
