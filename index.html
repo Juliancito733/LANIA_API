@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sistema de Candidatos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <style>
+        .token-info {
+            word-break: break-all;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">Sistema de Candidatos - OAuth 2.0 Test</h1>
+        
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Credenciales del Cliente</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="oauth-form">
+                            <div class="mb-3">
+                                <label for="clientId" class="form-label">Client ID</label>
+                                <input type="text" class="form-control" id="clientId" required />
+                            </div>
+                            <div class="mb-3">
+                                <label for="clientSecret" class="form-label">Client Secret</label>
+                                <input type="password" class="form-control" id="clientSecret" required />
+                            </div>
+                            <button type="submit" class="btn btn-primary">Obtener Token</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 mb-4">
+                <div class="card" id="token-card">
+                    <div class="card-header">
+                        <h5>Token de Acceso</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="token-section" class="hidden">
+                            <div class="token-info">
+                                <p><strong>Access Token:</strong> <span id="access-token">-</span></p>
+                                <p><strong>Tipo:</strong> <span id="token-type">-</span></p>
+                                <p><strong>Expira en:</strong> <span id="expires-in">-</span> segundos</p>
+                            </div>
+                            <button id="get-candidates" class="btn btn-success">Obtener Candidatos</button>
+                        </div>
+                        <div id="no-token-message">
+                            <p class="text-muted">Ingrese sus credenciales y haga clic en "Obtener Token" para comenzar.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-12">
+                <div class="card" id="result-card">
+                    <div class="card-header">
+                        <h5>Resultados</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="candidates-section" class="hidden">
+                            <h4 class="mb-3">Lista de Candidatos</h4>
+                            <div class="table-responsive">
+                                <table class="table table-striped table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Nombre</th>
+                                            <th>Correo</th>
+                                            <th>Teléfono</th>
+                                            <th>Género</th>
+                                            <th>Rango Edad</th>
+                                            <th>Tipo Identificación</th>
+                                            <th>País</th>
+                                            <th>Estado</th>
+                                            <th>Municipio</th>
+                                            <th>Colonia</th>
+                                            <th>Nivel Estudio</th>
+                                            <th>Giro</th>
+                                            <th>Empresa/Institución</th>
+                                            <th>ID Examen</th>
+                                            <th>Nombre Examen</th>
+                                            <th>Motivo</th>
+                                            <th>Calificación</th>
+                                            <th>Consentimiento Publicidad</th>
+                                            <th>Fecha Entrada</th>
+                                            <th>Fecha Salida</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="candidates-table-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div id="api-response-section" class="hidden">
+                            <h4 class="mb-3">Respuesta JSON</h4>
+                            <pre id="api-response">Esperando respuesta...</pre>
+                        </div>
+                        <div id="error-section" class="hidden">
+                            <div class="alert alert-danger" id="error-message"></div>
+                        </div>
+                        <div id="no-results-message">
+                            <p class="text-muted">Obtenga un token y haga una solicitud para ver los resultados aquí.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    let accessToken = '';
+    const API_BASE_URL = 'http://localhost:5000/api'; 
+
+    document.getElementById('oauth-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const clientId = document.getElementById('clientId').value;
+        const clientSecret = document.getElementById('clientSecret').value;
+        
+        hideAllMessages();
+        
+        try {
+            const response = await getAccessToken(clientId, clientSecret);
+            displayTokenInfo(response);
+        } catch (error) {
+            showError(`Error al obtener token: ${error.message}`);
+        }
+    });
+
+    document.getElementById('get-candidates').addEventListener('click', async function() {
+        hideAllMessages();
+        
+        try {
+            const candidates = await getCandidates();
+            displayCandidates(candidates);
+        } catch (error) {
+            showError(`Error al obtener candidatos: ${error.message}`);
+        }
+    });
+
+    async function getAccessToken(clientId, clientSecret) {
+        const formData = new URLSearchParams();
+        formData.append('grant_type', 'client_credentials');
+        formData.append('client_id', clientId);
+        formData.append('client_secret', clientSecret);
+
+        const response = await fetch(`${API_BASE_URL}/oauth/token`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Error en la autenticación');
+        }
+
+        return await response.json();
+    }
+
+    async function getCandidates() {
+        if (!accessToken) {
+            throw new Error('No hay token de acceso disponible');
+        }
+
+        const response = await fetch(`${API_BASE_URL}/candidatos/obtenerCandidatos`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Error al obtener candidatos');
+        }
+
+        return await response.json();
+    }
+
+    function displayTokenInfo(tokenData) {
+        accessToken = tokenData.access_token;
+        
+        document.getElementById('access-token').textContent = tokenData.access_token;
+        document.getElementById('token-type').textContent = tokenData.token_type;
+        document.getElementById('expires-in').textContent = tokenData.expires_in;
+        
+        document.getElementById('token-section').classList.remove('hidden');
+        document.getElementById('no-token-message').classList.add('hidden');
+    }
+
+    function displayCandidates(candidates) {
+        // Mostrar la respuesta JSON completa
+        document.getElementById('api-response').textContent = JSON.stringify(candidates, null, 2);
+        document.getElementById('api-response-section').classList.remove('hidden');
+        
+        // Llenar la tabla de candidatos
+        const tableBody = document.getElementById('candidates-table-body');
+        tableBody.innerHTML = '';
+        
+        candidates.forEach(candidato => {
+            const dem = candidato.demograficos || {};
+            const ubi = dem.ubicacion || {};
+            const form = candidato.formacion || {};
+            const exam = candidato.examen || {};
+            const exp = candidato.experiencia_servicio || {};
+            const fechas = candidato.fechas || {};
+            
+            const row = document.createElement('tr');
+            
+            row.innerHTML = `
+                <td>${candidato.id_candidato ?? ''}</td>
+                <td>${candidato.nombre_completo ?? ''}</td>
+                <td>${candidato.contacto?.correo ?? ''}</td>
+                <td>${candidato.contacto?.telefono ?? ''}</td>
+                <td>${dem.genero ?? ''}</td>
+                <td>${dem.rango_edad ?? ''}</td>
+                <td>${dem.tipo_identificacion ?? ''}</td>
+                <td>${ubi.pais ?? ''}</td>
+                <td>${ubi.estado ?? ''}</td>
+                <td>${ubi.municipio ?? ''}</td>
+                <td>${ubi.colonia ?? ''}</td>
+                <td>${form.nivel_estudio ?? ''}</td>
+                <td>${form.giro ?? ''}</td>
+                <td>${form.nombre_empresa_institucion ?? ''}</td>
+                <td>${exam.id_examen ?? ''}</td>
+                <td>${exam.nombre_examen ?? ''}</td>
+                <td>${exam.motivo ?? ''}</td>
+                <td>${exp.calificacion_servicio ?? ''}</td>
+                <td>${exp.consentimiento_publicidad !== undefined ? (exp.consentimiento_publicidad ? 'Sí' : 'No') : ''}</td>
+                <td>${fechas.entrada ?? ''}</td>
+                <td>${fechas.salida ?? ''}</td>
+            `;
+            
+            tableBody.appendChild(row);
+        });
+        
+        document.getElementById('candidates-section').classList.remove('hidden');
+        document.getElementById('no-results-message').classList.add('hidden');
+    }
+
+    function showError(message) {
+        const errorElement = document.getElementById('error-message');
+        errorElement.textContent = message;
+        document.getElementById('error-section').classList.remove('hidden');
+        document.getElementById('no-results-message').classList.add('hidden');
+    }
+
+    function hideAllMessages() {
+        document.getElementById('error-section').classList.add('hidden');
+        document.getElementById('api-response-section').classList.add('hidden');
+    }
+</script>
+</body>
+</html>

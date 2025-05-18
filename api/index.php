@@ -1,4 +1,8 @@
 <?php
+require_once __DIR__ . '/../src/Utils/CorsHandler.php';
+
+// Configurar CORS para todas las respuestas
+\Utils\CorsHandler::configureCors();
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -35,3 +39,4 @@ switch (true) {
         echo json_encode(["error" => "Ruta no encontrada"]);
         break;
 }
+?>

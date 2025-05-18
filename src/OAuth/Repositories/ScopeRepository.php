@@ -52,3 +52,4 @@ class ScopeRepository implements ScopeRepositoryInterface
         return $scopes;
     }
 }
+?>
